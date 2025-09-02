@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sommelier du Chocolat - Votre Guide Personnel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h1 {
+            color: #5a4a3f;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .tagline {
+            text-align: center;
+            color: #8b7355;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .welcome {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .question-card {
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .question-card.active {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .question-title {
+            font-size: 1.3em;
+            color: #5a4a3f;
+            margin-bottom: 20px;
+        }
+        
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .option {
+            background: #f8f8f8;
+            padding: 15px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .option:hover {
+            background: #764ba2;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .option.selected {
+            background: #667eea;
+            color: white;
+            border-color: #5a4a3f;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .progress-bar {
+            background: #f0f0f0;
+            height: 8px;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        
+        .recommendation {
+            background: #fff;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #764ba2;
+        }
+        
+        .recommendation h3 {
+            color: #5a4a3f;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .score {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .chocolate-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .detail-item {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .detail-label {
+            font-size: 0.9em;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            color: #5a4a3f;
+            font-weight: bold;
+        }
+        
+        .flavor-notes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .flavor-tag {
+            background: #f0e6ff;
+            color: #764ba2;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #764ba2;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .reset-btn {
+            background: #888;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .reset-btn:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍫 Sommelier du Chocolat</h1>
+        <p class="tagline">Votre guide personnel vers le chocolat parfait</p>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress"></div>
+        </div>
+        
+        <div id="welcome" class="welcome">
+            <h2>Bienvenue dans votre expérience chocolat personnalisée</h2>
+            <p style="margin: 20px 0;">Je vais vous poser quelques questions pour découvrir vos goûts et vous recommander les chocolats parfaits depuis la base de données C-SPOT.</p>
+            <button class="btn" onclick="startConsultation()">Commencer la dégustation virtuelle</button>
+        </div>
+        
+        <div id="question-container" class="question-card">
+            <h2 class="question-title" id="question-text"></h2>
+            <div class="options" id="options-container"></div>
+            <button class="btn" id="next-btn" onclick="submitAnswer()" style="display:none;">Continuer</button>
+        </div>
+        
+        <div id="loading" class="loading" style="display:none;">
+            <div class="spinner"></div>
+            <p style="margin-top: 20px;">Analyse de vos préférences en cours...</p>
+        </div>
+        
+        <div id="results" style="display:none;">
+            <h2 style="text-align: center; color: #5a4a3f; margin-bottom: 30px;">
+                🎯 Vos Chocolats Recommandés
+            </h2>
+            <div id="recommendations-list"></div>
+            <button class="reset-btn" onclick="location.reload()">Nouvelle consultation</button>
+        </div>
+    </div>
+    
+    <script>
+        let currentQuestion = null;
+        let selectedAnswers = [];
+        let preferences = {};
+        
+        async function startConsultation() {
+            document.getElementById('welcome').style.display = 'none';
+            
+            const response = await fetch('/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            
+            const data = await response.json();
+            if (data.question) {
+                showQuestion(data.question);
+            }
+        }
+        
+        function showQuestion(question) {
+            currentQuestion = question;
+            selectedAnswers = [];
+            
+            document.getElementById('question-container').classList.add('active');
+            document.getElementById('question-text').innerHTML = question.question;
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const div = document.createElement('div');
+                div.className = 'option';
+                div.textContent = option;
+                div.onclick = () => selectOption(index, question.multiple);
+                container.appendChild(div);
+            });
+            
+            document.getElementById('next-btn').style.display = 'none';
+        }
+        
+        function selectOption(index, isMultiple) {
+            const options = document.querySelectorAll('.option');
+            
+            if (isMultiple) {
+                options[index].classList.toggle('selected');
+                if (selectedAnswers.includes(index)) {
+                    selectedAnswers = selectedAnswers.filter(i => i !== index);
+                } else {
+                    selectedAnswers.push(index);
+                }
+            } else {
+                options.forEach(opt => opt.classList.remove('selected'));
+                options[index].classList.add('selected');
+                selectedAnswers = [index];
+            }
+            
+            document.getElementById('next-btn').style.display = 
+                selectedAnswers.length > 0 ? 'block' : 'none';
+        }
+        
+        async function submitAnswer() {
+            if (!currentQuestion || selectedAnswers.length === 0) return;
+            
+            const answer = selectedAnswers.length === 1 
+                ? currentQuestion.options[selectedAnswers[0]]
+                : selectedAnswers.map(i => currentQuestion.options[i]);
+            
+            preferences[currentQuestion.id] = answer;
+            
+            // Mise à jour de la barre de progression
+            const progress = (Object.keys(preferences).length / 7) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+            
+            const response = await fetch('/answer', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    answer: answer,
+                    question_id: currentQuestion.id
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'question') {
+                showQuestion(data.question);
+            } else if (data.status === 'recommendations') {
+                showRecommendations(data.results);
+            }
+        }
+        
+        function showRecommendations(results) {
+            document.getElementById('question-container').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('results').style.display = 'block';
+                document.getElementById('progress').style.width = '100%';
+                
+                const container = document.getElementById('recommendations-list');
+                container.innerHTML = '';
+                
+                results.forEach((choco, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'recommendation';
+                    div.innerHTML = `
+                        <span class="score">Match: ${choco.score}%</span>
+                        <h3>#${index + 1} - ${choco.name}</h3>
+                        <p style="color: #888; margin-bottom: 10px;">${choco.brand}</p>
+                        <p style="margin-bottom: 15px;">${choco.description}</p>
+                        
+                        <div class="chocolate-details">
+                            ${choco.origin ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Origine</div>
+                                <div class="detail-value">${choco.origin}</div>
+                            </div>` : ''}
+                            ${choco.cocoa ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Cacao</div>
+                                <div class="detail-value">${choco.cocoa}%</div>
+                            </div>` : ''}
+                            ${choco.rating ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Note C-SPOT</div>
+                                <div class="detail-value">⭐ ${choco.rating}/5</div>
+                            </div>` : ''}
+                            ${choco.price ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Prix</div>
+                                <div class="detail-value">${choco.price}</div>
+                            </div>` : ''}
+                        </div>
+                        
+                        <div class="flavor-notes">
+                            ${choco.flavors.map(f => `<span class="flavor-tag">${f}</span>`).join('')}
+                        </div>
+                        
+                        ${choco.url ? `<p style="margin-top: 15px;"><a href="${choco.url}" target="_blank" style="color: #764ba2;">Plus d'infos →</a></p>` : ''}
+                    `;
+                    container.appendChild(div);
+                });
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
