@@ -13,7 +13,7 @@
 
 3. **Drag & drop** the zip file to Netlify dashboard
 
-4. **Your site is live!** 🎉
+4. **Your site is live!** 🎉 
    - URL: `https://random-name.netlify.app`
    - Can be customized later
 
