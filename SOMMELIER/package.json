@@ -11,8 +11,6 @@
     "convert-data": "node scripts/convert-excel.js"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.1.13",
-    "autoprefixer": "^10.4.21",
     "axios": "^1.5.0",
     "date-fns": "^4.1.0",
     "next": "^14.0.0",
@@ -21,7 +19,6 @@
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "styled-components": "^6.0.0",
-    "tailwindcss": "^4.1.13",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
