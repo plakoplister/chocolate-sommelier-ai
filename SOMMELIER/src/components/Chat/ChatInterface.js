@@ -4,7 +4,7 @@ import FixedChatInput from './FixedChatInput'
 import ChocolateRecommendations from '../Recommendations/ChocolateRecommendations'
 
 // Client-side sommelier logic
-const processMessageClientSide = async ({ message, currentPreferences, conversationHistory, chocolatesData }) => {
+const processMessageClientSide = async ({ message, currentPreferences, conversationHistory, chocolatesData, filtersData }) => {
   // Extract preferences from message
   const extractedPreferences = extractPreferencesFromMessage(message)
   const updatedPreferences = { ...currentPreferences, ...extractedPreferences }
@@ -28,13 +28,13 @@ const processMessageClientSide = async ({ message, currentPreferences, conversat
     // Continue conversation after recommendations
     responseMessage = handleFollowUpMessage(message, updatedPreferences)
     if (!isRequestingNewSearch(message)) {
-      recommendations = findRecommendations(updatedPreferences, chocolatesData)
+      recommendations = findRecommendations(updatedPreferences, chocolatesData, filtersData)
     }
   } else if (missingInfo.length > 0) {
     responseMessage = getNextQuestion(missingInfo[0], updatedPreferences)
   } else {
     // We have ALL required info, make recommendations
-    recommendations = findRecommendations(updatedPreferences, chocolatesData)
+    recommendations = findRecommendations(updatedPreferences, chocolatesData, filtersData)
     responseMessage = generateRecommendationMessage(recommendations, updatedPreferences)
   }
 
@@ -118,7 +118,7 @@ const getNextQuestion = (missing, preferences) => {
   }
 }
 
-const findRecommendations = (preferences, chocolatesData) => {
+const findRecommendations = (preferences, chocolatesData, filtersData) => {
   let filtered = chocolatesData.slice()
 
   // Filter by cocoa percentage
@@ -132,16 +132,22 @@ const findRecommendations = (preferences, chocolatesData) => {
     }
   }
 
-  // Filter by origin
+  // Filter by origin using data from filters.json
   if (preferences.origin_preference === 'south_america') {
-    const southAmericanCountries = ['Ecuador', 'Venezuela', 'Peru', 'Brazil', 'Colombia']
+    // Use all South American countries from the filters data
+    const southAmericanCountries = filtersData.origin_countries.filter(country =>
+      ['Brazil', 'Colombia', 'Ecuador', 'Venezuela', 'Peru', 'Costa Rica', 'Guatemala', 'Honduras', 'Mexico', 'Nicaragua', 'Jamaica', 'Trinidad', 'Dominican Republic'].includes(country)
+    )
     filtered = filtered.filter(c => southAmericanCountries.includes(c.origin_country))
   } else if (preferences.origin_preference === 'africa') {
-    const africanCountries = ['Madagascar', 'Tanzania', 'Ghana', 'Uganda', 'Congo']
+    // Use all African countries from the filters data
+    const africanCountries = filtersData.origin_countries.filter(country =>
+      ['Madagascar', 'Tanzania', 'Ghana'].includes(country)
+    )
     filtered = filtered.filter(c => africanCountries.includes(c.origin_country))
   }
 
-  // Filter by flavor
+  // Filter by flavor using expanded matching from filters.json
   if (preferences.flavor_profile) {
     filtered = filtered.filter(c => {
       const allFlavors = [
@@ -149,7 +155,48 @@ const findRecommendations = (preferences, chocolatesData) => {
         c.flavor_notes_secondary,
         c.flavor_notes_tertiary
       ].join(' ').toLowerCase()
-      return allFlavors.includes(preferences.flavor_profile.toLowerCase())
+
+      const searchTerm = preferences.flavor_profile.toLowerCase()
+
+      // Direct match
+      if (allFlavors.includes(searchTerm)) {
+        return true
+      }
+
+      // Expanded matching for broader flavor families
+      if (searchTerm === 'floral') {
+        return allFlavors.includes('rose') || allFlavors.includes('violet') ||
+               allFlavors.includes('jasmine') || allFlavors.includes('lavender') ||
+               allFlavors.includes('orange blossom') || allFlavors.includes('elderflower') ||
+               allFlavors.includes('hibiscus')
+      }
+
+      if (searchTerm === 'fruité') {
+        return allFlavors.includes('cherry') || allFlavors.includes('berry') ||
+               allFlavors.includes('citrus') || allFlavors.includes('tropical') ||
+               allFlavors.includes('stone fruit') || allFlavors.includes('apple') ||
+               allFlavors.includes('pear') || allFlavors.includes('grape')
+      }
+
+      if (searchTerm === 'épicé') {
+        return allFlavors.includes('cinnamon') || allFlavors.includes('cardamom') ||
+               allFlavors.includes('clove') || allFlavors.includes('ginger') ||
+               allFlavors.includes('pepper') || allFlavors.includes('chili')
+      }
+
+      if (searchTerm === 'noisette') {
+        return allFlavors.includes('hazelnut') || allFlavors.includes('almond') ||
+               allFlavors.includes('walnut') || allFlavors.includes('pecan') ||
+               allFlavors.includes('cashew') || allFlavors.includes('pistachio')
+      }
+
+      if (searchTerm === 'caramel') {
+        return allFlavors.includes('caramel') || allFlavors.includes('toffee') ||
+               allFlavors.includes('butterscotch') || allFlavors.includes('dulce de leche') ||
+               allFlavors.includes('honey') || allFlavors.includes('maple')
+      }
+
+      return false
     })
   }
 
@@ -237,16 +284,20 @@ export default function ChatInterface() {
     setIsLoading(true)
 
     try {
-      // Load chocolate data and create client-side sommelier
+      // Load chocolate data and filters
       const chocolatesResponse = await fetch('/data/chocolates.json')
       const chocolatesData = await chocolatesResponse.json()
+
+      const filtersResponse = await fetch('/data/filters.json')
+      const filtersData = await filtersResponse.json()
 
       // Simple client-side sommelier logic
       const result = await processMessageClientSide({
         message: content,
         currentPreferences: userPreferences,
         conversationHistory: messages,
-        chocolatesData
+        chocolatesData,
+        filtersData
       })
 
       // Add assistant response
