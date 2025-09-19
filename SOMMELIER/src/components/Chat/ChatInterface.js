@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import ChatMessage from './ChatMessage'
 import FixedChatInput from './FixedChatInput'
 import ChocolateRecommendations from '../Recommendations/ChocolateRecommendations'
+import { useTranslation } from '../../hooks/useTranslation'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 // Helper function to get random items from array
 const getRandomItems = (array, count) => {
@@ -36,40 +38,55 @@ const getCountriesByContinent = (continent, allCountries) => {
   return allCountries.filter(country => mappedCountries.includes(country))
 }
 
-// Detect search type from initial response
+// Detect search type from initial response (multilingual)
 const detectSearchType = (message) => {
   const lowerMessage = message.toLowerCase()
 
+  // Maker focused (FR/EN)
   if (lowerMessage.includes('fabrication') || lowerMessage.includes('belgique') ||
       lowerMessage.includes('france') || lowerMessage.includes('suisse') ||
-      lowerMessage.includes('chocolatier')) {
+      lowerMessage.includes('chocolatier') || lowerMessage.includes('manufacturing') ||
+      lowerMessage.includes('belgium') || lowerMessage.includes('switzerland') ||
+      lowerMessage.includes('manufacturer')) {
     return 'maker_focused'
   }
 
+  // Origin focused (FR/EN)
   if (lowerMessage.includes('fève') || lowerMessage.includes('madagascar') ||
       lowerMessage.includes('ghana') || lowerMessage.includes('ecuador') ||
-      lowerMessage.includes('origine')) {
+      lowerMessage.includes('origine') || lowerMessage.includes('bean') ||
+      lowerMessage.includes('origin')) {
     return 'origin_focused'
   }
 
+  // Type focused (FR/EN)
   if (lowerMessage.includes('tablette') || lowerMessage.includes('bonbon') ||
-      lowerMessage.includes('truffe') || lowerMessage.includes('type')) {
+      lowerMessage.includes('truffe') || lowerMessage.includes('type') ||
+      lowerMessage.includes('bar') || lowerMessage.includes('truffle')) {
     return 'type_focused'
   }
 
+  // Cocoa focused (FR/EN)
   if (lowerMessage.includes('doux') || lowerMessage.includes('noir') ||
       lowerMessage.includes('intense') || lowerMessage.includes('cacao') ||
-      lowerMessage.includes('concentration') || lowerMessage.includes('%')) {
+      lowerMessage.includes('concentration') || lowerMessage.includes('%') ||
+      lowerMessage.includes('milk') || lowerMessage.includes('dark') ||
+      lowerMessage.includes('cocoa')) {
     return 'cocoa_focused'
   }
 
+  // Flavor focused (FR/EN)
   if (lowerMessage.includes('fruit') || lowerMessage.includes('épice') ||
-      lowerMessage.includes('floral') || lowerMessage.includes('saveur')) {
+      lowerMessage.includes('floral') || lowerMessage.includes('saveur') ||
+      lowerMessage.includes('flavor') || lowerMessage.includes('spice') ||
+      lowerMessage.includes('taste')) {
     return 'flavor_focused'
   }
 
+  // Occasion focused (FR/EN)
   if (lowerMessage.includes('dégustation') || lowerMessage.includes('cadeau') ||
-      lowerMessage.includes('occasion')) {
+      lowerMessage.includes('occasion') || lowerMessage.includes('tasting') ||
+      lowerMessage.includes('gift')) {
     return 'occasion_focused'
   }
 
@@ -159,7 +176,7 @@ const selectConversationCategories = (searchType, expertiseLevel) => {
 }
 
 // Client-side sommelier logic
-const processMessageClientSide = async ({ message, currentPreferences, conversationHistory, chocolatesData, filtersData }) => {
+const processMessageClientSide = async ({ message, currentPreferences, conversationHistory, chocolatesData, filtersData, t }) => {
   // Determine what category we're currently asking about
   let currentCategory = null
   if (currentPreferences.conversationCategories) {
@@ -170,8 +187,11 @@ const processMessageClientSide = async ({ message, currentPreferences, conversat
   }
 
   // Extract preferences from message
+  console.log('🔄 Current preferences before extraction:', currentPreferences)
   const extractedPreferences = extractPreferencesFromMessage(message, filtersData, currentCategory)
+  console.log('🔄 Extracted preferences from this message:', extractedPreferences)
   const updatedPreferences = { ...currentPreferences, ...extractedPreferences }
+  console.log('🔄 Updated preferences after merge:', updatedPreferences)
 
   // Initialize conversation categories if not set
   if (!updatedPreferences.conversationCategories) {
@@ -213,34 +233,34 @@ const processMessageClientSide = async ({ message, currentPreferences, conversat
   if (conversationHistory.length <= 1) {
     // Dynamic welcome message with first question
     const firstCategory = updatedPreferences.conversationCategories[0]
-    responseMessage = `Bienvenue chez XOCOA. Pour vous recommander le chocolat parfait, j'aimerais connaître vos préférences. ${getDynamicQuestion(firstCategory, filtersData, updatedPreferences)}`
+    responseMessage = `${t('welcome.greeting')} ${getDynamicQuestion(firstCategory, filtersData, updatedPreferences, t)}`
   } else if (previouslyHadRecommendations && hasAllPreferences) {
     // Continue conversation after recommendations
-    responseMessage = handleFollowUpMessage(message, updatedPreferences)
+    responseMessage = handleFollowUpMessage(message, updatedPreferences, t)
     if (!isRequestingNewSearch(message)) {
       recommendations = findRecommendations(updatedPreferences, chocolatesData, filtersData)
     }
   } else if (missingInfo.length > 0) {
-    responseMessage = getDynamicQuestion(missingInfo[0], filtersData, updatedPreferences)
+    responseMessage = getDynamicQuestion(missingInfo[0], filtersData, updatedPreferences, t)
   } else if (actualPreferences >= 2) {
     // We have enough actual preferences, make recommendations
     console.log('📌 MAKING RECOMMENDATIONS with preferences:', updatedPreferences)
     recommendations = findRecommendations(updatedPreferences, chocolatesData, filtersData)
     console.log('📌 Found recommendations:', recommendations.length)
-    responseMessage = generateRecommendationMessage(recommendations, updatedPreferences)
+    responseMessage = generateRecommendationMessage(recommendations, updatedPreferences, t)
   } else {
     // Not enough preferences, ask one more question
     const unansweredCategories = updatedPreferences.conversationCategories.filter(req =>
       !updatedPreferences[req] || updatedPreferences[req] === ''
     )
     if (unansweredCategories.length > 0) {
-      responseMessage = getDynamicQuestion(unansweredCategories[0], filtersData, updatedPreferences)
+      responseMessage = getDynamicQuestion(unansweredCategories[0], filtersData, updatedPreferences, t)
     } else {
       // Fallback to recommendations even with few preferences
       console.log('📌 FALLBACK RECOMMENDATIONS with preferences:', updatedPreferences)
       recommendations = findRecommendations(updatedPreferences, chocolatesData, filtersData)
       console.log('📌 Found recommendations:', recommendations.length)
-      responseMessage = generateRecommendationMessage(recommendations, updatedPreferences)
+      responseMessage = generateRecommendationMessage(recommendations, updatedPreferences, t)
     }
   }
 
@@ -257,10 +277,14 @@ const extractPreferencesFromMessage = (message, filtersData, currentCategory = n
 
   console.log('🔤 Extracting preferences from message:', message)
 
-  // Check for "skip" responses
+  // Check for "skip" responses (multilingual)
   const skipResponses = [
+    // French
     'aucun', 'aucune', 'non', 'pas de préférence', 'peu importe', 'indifférent',
-    'je ne sais pas', 'pas d\'avis', 'n\'importe', 'skip', 'passer', 'suivant'
+    'je ne sais pas', 'pas d\'avis', 'n\'importe', 'passer', 'suivant',
+    // English
+    'none', 'any', 'no preference', 'doesn\'t matter', 'don\'t care', 'indifferent',
+    'don\'t know', 'no opinion', 'whatever', 'skip', 'pass', 'next'
   ]
 
   const isSkipResponse = skipResponses.some(skip => lowerMessage.includes(skip))
@@ -272,17 +296,25 @@ const extractPreferencesFromMessage = (message, filtersData, currentCategory = n
     return preferences
   }
 
-  // Cocoa percentage - NEW CATEGORIES (only when asking about cocoa percentage)
+  // Cocoa percentage - NEW CATEGORIES (only when asking about cocoa percentage) - MULTILINGUAL
   if (currentCategory === 'cocoa_percentage') {
-    if (lowerMessage.includes('très doux') || lowerMessage.includes('<40') || lowerMessage.includes('< 40')) {
+    if (lowerMessage.includes('très doux') || lowerMessage.includes('very mild') ||
+        lowerMessage.includes('<40') || lowerMessage.includes('< 40')) {
       preferences.cocoa_percentage = '<40%'
-    } else if (lowerMessage.includes('doux') && !lowerMessage.includes('très')) {
+    } else if ((lowerMessage.includes('doux') && !lowerMessage.includes('très')) ||
+               lowerMessage.includes('milk') || lowerMessage.includes('40-50')) {
       preferences.cocoa_percentage = '40-50%'
-    } else if (lowerMessage.includes('noir léger') || lowerMessage.includes('50-70')) {
+    } else if (lowerMessage.includes('noir léger') || lowerMessage.includes('dark light') ||
+               lowerMessage.includes('50-70') || lowerMessage.includes('50%')) {
       preferences.cocoa_percentage = '50-70%'
-    } else if (lowerMessage.includes('noir') && !lowerMessage.includes('léger')) {
+    } else if ((lowerMessage.includes('noir') && !lowerMessage.includes('léger')) ||
+               (lowerMessage.includes('dark') && !lowerMessage.includes('light')) ||
+               lowerMessage.includes('70-85') || lowerMessage.includes('70%') ||
+               lowerMessage.includes('75%') || lowerMessage.includes('80%')) {
       preferences.cocoa_percentage = '70-85%'
-    } else if (lowerMessage.includes('intense') || lowerMessage.includes('>85') || lowerMessage.includes('> 85')) {
+    } else if (lowerMessage.includes('intense') || lowerMessage.includes('>85') ||
+               lowerMessage.includes('> 85') || lowerMessage.includes('85%') ||
+               lowerMessage.includes('90%') || lowerMessage.includes('95%')) {
       preferences.cocoa_percentage = '>85%'
     }
   }
@@ -417,48 +449,63 @@ const extractPreferencesFromMessage = (message, filtersData, currentCategory = n
     }
   }
 
-  // Detect requests to relax criteria (ALWAYS CHECK, regardless of current category)
+  // Detect requests to relax criteria (ALWAYS CHECK, regardless of current category) - MULTILINGUAL
   // This should work even after recommendations are made
-  if (lowerMessage.includes('sans le') || lowerMessage.includes('enlever') || lowerMessage.includes('retirer')) {
+  if (lowerMessage.includes('sans') || lowerMessage.includes('enlever') || lowerMessage.includes('retirer') ||
+      lowerMessage.includes('without') || lowerMessage.includes('remove') || lowerMessage.includes('drop')) {
     console.log('🔓 DETECTED: Request to remove criteria')
-    if (lowerMessage.includes('origine') || lowerMessage.includes('pays')) {
+    if (lowerMessage.includes('origine') || lowerMessage.includes('pays') ||
+        lowerMessage.includes('origin') || lowerMessage.includes('country')) {
       preferences.remove_origin = true
       console.log('   → Removing origin criteria')
     }
-    if (lowerMessage.includes('saveur') || lowerMessage.includes('goût')) {
+    if (lowerMessage.includes('saveur') || lowerMessage.includes('goût') ||
+        lowerMessage.includes('flavor') || lowerMessage.includes('taste')) {
       preferences.remove_flavor = true
       console.log('   → Removing flavor criteria')
     }
-    if (lowerMessage.includes('cacao') || lowerMessage.includes('pourcentage')) {
+    if (lowerMessage.includes('cacao') || lowerMessage.includes('pourcentage') ||
+        lowerMessage.includes('cocoa') || lowerMessage.includes('percentage')) {
       preferences.remove_cocoa = true
       console.log('   → Removing cocoa criteria')
     }
-    if (lowerMessage.includes('chocolatier') || lowerMessage.includes('fabricant')) {
+    if (lowerMessage.includes('chocolatier') || lowerMessage.includes('fabricant') ||
+        lowerMessage.includes('manufacturer') || lowerMessage.includes('maker')) {
       preferences.remove_maker = true
       console.log('   → Removing maker criteria')
     }
-    if (lowerMessage.includes('certification')) {
+    if (lowerMessage.includes('certification') ||
+        lowerMessage.includes('fair trade') || lowerMessage.includes('organic') ||
+        lowerMessage.includes('b-corp') || lowerMessage.includes('demeter') ||
+        lowerMessage.includes('direct trade') || lowerMessage.includes('rainforest') ||
+        lowerMessage.includes('utz')) {
       preferences.remove_certification = true
       console.log('   → Removing certification criteria')
     }
   }
 
-  if (lowerMessage.includes('élargir') || lowerMessage.includes('assouplir')) {
+  if (lowerMessage.includes('élargir') || lowerMessage.includes('assouplir') ||
+      lowerMessage.includes('broaden') || lowerMessage.includes('expand') || lowerMessage.includes('relax')) {
     console.log('🔓 DETECTED: Request to expand criteria')
-    if (lowerMessage.includes('saveur') || lowerMessage.includes('goût')) {
+    if (lowerMessage.includes('saveur') || lowerMessage.includes('goût') ||
+        lowerMessage.includes('flavor') || lowerMessage.includes('taste')) {
       preferences.expand_flavor = true
       console.log('   → Expanding flavor criteria')
     }
-    if (lowerMessage.includes('origine') || lowerMessage.includes('pays')) {
+    if (lowerMessage.includes('origine') || lowerMessage.includes('pays') ||
+        lowerMessage.includes('origin') || lowerMessage.includes('country')) {
       preferences.expand_origin = true
       console.log('   → Expanding origin criteria')
     }
   }
 
-  // Keep occasion for backward compatibility
-  if (lowerMessage.includes('cadeau') || lowerMessage.includes('offrir')) {
+  // Keep occasion for backward compatibility (multilingual)
+  if (lowerMessage.includes('cadeau') || lowerMessage.includes('offrir') ||
+      lowerMessage.includes('gift') || lowerMessage.includes('present')) {
     preferences.occasion = 'cadeau'
-  } else if (lowerMessage.includes('dégustation') || lowerMessage.includes('personnel')) {
+  } else if (lowerMessage.includes('dégustation') || lowerMessage.includes('personnel') ||
+             lowerMessage.includes('tasting') || lowerMessage.includes('personal') ||
+             lowerMessage.includes('myself')) {
     preferences.occasion = 'dégustation'
   }
 
@@ -468,23 +515,19 @@ const extractPreferencesFromMessage = (message, filtersData, currentCategory = n
 }
 
 // Generate dynamic questions based on category and available data
-const getDynamicQuestion = (category, filtersData, userPreferences = {}) => {
+const getDynamicQuestion = (category, filtersData, userPreferences = {}, t) => {
   switch (category) {
     case 'cocoa_percentage':
-      return "Quel pourcentage de cacao préférez-vous ? Très doux (<40%), doux (40-50%), noir léger (50-70%), noir (70-85%), ou intense (>85%) ?"
+      return t('questions.cocoaPercentage')
 
     case 'flavor_profile':
       // Pick 10 random flavors from the list
       const randomFlavors = getRandomItems(filtersData.flavors.filter(f => !f.startsWith(' ')), 10)
-      const flavorGroups = [
-        randomFlavors.slice(0, 3).join(', '),
-        randomFlavors.slice(3, 6).join(', '),
-        randomFlavors.slice(6, 10).join(', ')
-      ]
-      return `Quelles saveurs vous attirent le plus ? Par exemple : ${flavorGroups.join(' ? Ou peut-être ')} ?`
+      const flavorGroups = randomFlavors.slice(0, 6).join(', ')
+      return t('questions.flavor', { flavors: flavorGroups })
 
     case 'origin_continent':
-      return "Quelle région d'origine du cacao vous intéresse ? Afrique, Asie, ou Amérique du Sud ?"
+      return t('questions.originContinent')
 
     case 'origin_country':
       // Filter countries based on selected continent
@@ -492,21 +535,24 @@ const getDynamicQuestion = (category, filtersData, userPreferences = {}) => {
         const continentCountries = getCountriesByContinent(userPreferences.origin_continent, filtersData.origin_countries)
         if (continentCountries.length > 0) {
           const randomCountries = getRandomItems(continentCountries, Math.min(6, continentCountries.length))
-          return `Quel pays d'origine du cacao de ${userPreferences.origin_continent.toLowerCase()} vous intéresse ? ${randomCountries.join(', ')} ?`
+          return t('questions.originCountry', {
+            continent: userPreferences.origin_continent.toLowerCase(),
+            countries: randomCountries.join(', ')
+          })
         }
       }
       // Fallback if no continent selected or no countries found
       const randomCountries = getRandomItems(filtersData.origin_countries, 6)
-      return `Dans quel pays d'origine du cacao spécifiquement ? ${randomCountries.join(', ')} ?`
+      return t('questions.originCountryGeneral', { countries: randomCountries.join(', ') })
 
     case 'maker_country':
       // Pick 5 random maker countries
       const randomMakers = getRandomItems(filtersData.maker_countries.filter(c => c !== 'Unknown'), 5)
-      return `Préférez-vous des chocolatiers (fabricants) d'un pays particulier ? ${randomMakers.join(', ')} ?`
+      return t('questions.makerCountry', { countries: randomMakers.join(', ') })
 
     case 'certification':
       const certs = filtersData.certifications.join(', ')
-      return `Les certifications sont-elles importantes pour vous ? (${certs})`
+      return t('questions.certification', { certifications: certs })
 
     case 'pairing':
       const pairingTypes = ['wine', 'spirits', 'cheese', 'fruits', 'nuts']
@@ -538,20 +584,20 @@ const getDynamicQuestion = (category, filtersData, userPreferences = {}) => {
 
     case 'bean_variety':
       const varieties = filtersData.bean_varieties
-      return `Avez-vous une préférence pour la variété de fève ? ${varieties.join(', ')} ?`
+      return t('questions.beanVariety', { varieties: varieties.join(', ') })
 
     case 'price_range':
-      return "Quel est votre budget ? Économique (<15€), Standard (15-30€), ou Premium (>30€) ?"
+      return t('questions.price')
 
     case 'type':
       const types = filtersData.types
-      return `Quel type de chocolat préférez-vous ? ${types.join(', ')} ?`
+      return t('questions.type', { types: types.join(', ') })
 
     case 'occasion':
-      return "Pour quelle occasion ? Dégustation personnelle, cadeau, partage entre amis ?"
+      return t('questions.occasion')
 
     default:
-      return "Avez-vous d'autres préférences particulières ?"
+      return t('questions.other')
   }
 }
 
@@ -732,85 +778,83 @@ const findRecommendations = (preferences, chocolatesData, filtersData) => {
   return filtered.slice(0, 6)
 }
 
-const generateRecommendationMessage = (recommendations, preferences) => {
+const generateRecommendationMessage = (recommendations, preferences, t) => {
   if (recommendations.length === 0) {
-    return generateNoResultsMessage(preferences)
+    return generateNoResultsMessage(preferences, t)
   }
 
-  let message = `Parfait ! Basé sur vos préférences`
+  let message = `${t('recommendations.perfect')}`
   if (preferences.cocoa_percentage) {
-    message += ` (${preferences.cocoa_percentage} de cacao`
+    message += ` (${preferences.cocoa_percentage})`
   }
   if (preferences.flavor_profile) {
-    message += `, profil ${preferences.flavor_profile}`
+    message += `, ${preferences.flavor_profile}`
   }
-  if (preferences.origin_preference === 'south_america') {
-    message += `, origine Amérique du Sud`
-  }
-  message += `), voici mes ${recommendations.length} recommandations personnalisées.\n\nN'hésitez pas à me dire si vous souhaitez plus d'informations sur l'un d'eux !`
+  message += `, ${t('recommendations.found', { count: recommendations.length })}\n\n${t('recommendations.askMore')}`
   return message
 }
 
-const generateNoResultsMessage = (preferences) => {
+const generateNoResultsMessage = (preferences, t) => {
   const appliedCriteria = []
 
   // List all applied criteria
   if (preferences.cocoa_percentage && preferences.cocoa_percentage !== 'none') {
-    appliedCriteria.push(`pourcentage de cacao (${preferences.cocoa_percentage})`)
+    appliedCriteria.push(`${t('recommendations.criteriaLabels.cocoa_percentage')} (${preferences.cocoa_percentage})`)
   }
 
   if (preferences.flavor_profile && preferences.flavor_profile !== 'none') {
-    appliedCriteria.push(`saveur (${preferences.flavor_profile})`)
+    appliedCriteria.push(`${t('recommendations.criteriaLabels.flavor_profile')} (${preferences.flavor_profile})`)
   }
 
   if (preferences.origin_country && preferences.origin_country !== 'none') {
-    appliedCriteria.push(`origine (${preferences.origin_country})`)
+    appliedCriteria.push(`${t('recommendations.criteriaLabels.origin_country')} (${preferences.origin_country})`)
   }
 
   if (preferences.maker_country && preferences.maker_country !== 'none') {
-    appliedCriteria.push(`chocolatier (${preferences.maker_country})`)
+    appliedCriteria.push(`${t('recommendations.criteriaLabels.maker_country')} (${preferences.maker_country})`)
   }
 
   if (preferences.certification && preferences.certification !== 'none') {
-    appliedCriteria.push(`certification (${preferences.certification})`)
+    appliedCriteria.push(`${t('recommendations.criteriaLabels.certification')} (${preferences.certification})`)
   }
 
   if (preferences.pairing && preferences.pairing !== 'none') {
     if (typeof preferences.pairing === 'object') {
-      appliedCriteria.push(`accord ${preferences.pairing.type} (${preferences.pairing.value})`)
+      appliedCriteria.push(`${t('recommendations.criteriaLabels.pairing')} ${preferences.pairing.type} (${preferences.pairing.value})`)
     }
   }
 
   if (preferences.texture && preferences.texture !== 'none') {
-    appliedCriteria.push(`texture (${preferences.texture})`)
+    appliedCriteria.push(`${t('recommendations.criteriaLabels.texture')} (${preferences.texture})`)
   }
 
   if (preferences.bean_variety && preferences.bean_variety !== 'none') {
-    appliedCriteria.push(`variété de fève (${preferences.bean_variety})`)
+    appliedCriteria.push(`${t('recommendations.criteriaLabels.bean_variety')} (${preferences.bean_variety})`)
   }
 
-  let message = "Je n'ai trouvé aucun chocolat correspondant exactement à tous vos critères."
+  let message = t('recommendations.noResults')
 
   if (appliedCriteria.length > 0) {
-    message += `\n\nVos critères actuels :\n• ${appliedCriteria.join('\n• ')}`
-    message += "\n\nSouhaiteriez-vous assouplir l'un de ces critères pour que je puisse vous proposer des chocolats exceptionnels ? Par exemple, vous pouvez me dire \"sans le critère origine\" ou \"élargir les saveurs\"."
+    message += `\n\n${t('recommendations.currentCriteria')} :\n• ${appliedCriteria.join('\n• ')}`
+    message += `\n\n${t('recommendations.relaxCriteria')}`
   }
 
   return message
 }
 
-const handleFollowUpMessage = (message, preferences) => {
+const handleFollowUpMessage = (message, preferences, t) => {
   const lowerMessage = message.toLowerCase()
 
   if (lowerMessage.includes('merci') || lowerMessage.includes('thank')) {
-    return "Je vous en prie ! C'est un plaisir de vous aider à découvrir de merveilleux chocolats. Avez-vous d'autres questions ?"
+    return t('followUp.thanks')
   }
 
-  if (lowerMessage.includes('détail') || lowerMessage.includes('plus d\'info')) {
-    return "Je serais ravi de vous donner plus de détails ! Quel chocolat vous intéresse particulièrement ?"
+  if (lowerMessage.includes('détail') || lowerMessage.includes('plus d\'info') ||
+      lowerMessage.includes('detail') || lowerMessage.includes('more info')) {
+    return t('followUp.moreDetails')
   }
 
-  return "Comment puis-je vous aider davantage ? Souhaitez-vous explorer d'autres options ou avez-vous des questions sur ces recommandations ?"
+  return t('followUp.default')
 }
 
 const isRequestingNewSearch = (message) => {
@@ -821,24 +865,38 @@ const isRequestingNewSearch = (message) => {
 }
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'assistant',
-      content: `Bienvenue chez XOCOA. Je suis votre sommelier personnel du chocolat.
+  const { t, lang } = useTranslation()
+  const { language } = useLanguage()
 
-Quel type de chocolat recherchez-vous ?
-• Une origine de fabrication spécifique ? (Belgique, France, Suisse...)
-• Une origine de fève particulière ? (Madagascar, Ghana, Ecuador...)
-• Un type de chocolat ? (tablette, bonbon, truffe...)
-• Une concentration en cacao ? (doux, noir, intense...)
-• Une saveur particulière ? (fruits, épices, floral...)
-• Pour une occasion spéciale ? (dégustation, cadeau...)
+  // Build initial welcome message from translations
+  const getWelcomeMessage = () => {
+    const w = lang.welcome
+    return `${w.greeting}
 
-Dites-moi ce qui vous intéresse le plus !`,
-      timestamp: new Date()
-    }
-  ])
+${w.question}
+• ${w.options.maker}
+• ${w.options.origin}
+• ${w.options.type}
+• ${w.options.cocoa}
+• ${w.options.flavor}
+• ${w.options.occasion}
+
+${w.prompt}`
+  }
+
+  const [messages, setMessages] = useState([])
+
+  // Reset messages when language changes
+  useEffect(() => {
+    setMessages([
+      {
+        id: 1,
+        type: 'assistant',
+        content: getWelcomeMessage(),
+        timestamp: new Date()
+      }
+    ])
+  }, [language]) // eslint-disable-line react-hooks/exhaustive-deps
   const [recommendations, setRecommendations] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [userPreferences, setUserPreferences] = useState({})
@@ -877,7 +935,8 @@ Dites-moi ce qui vous intéresse le plus !`,
         currentPreferences: userPreferences,
         conversationHistory: messages,
         chocolatesData,
-        filtersData
+        filtersData,
+        t
       })
 
       // Add assistant response
