@@ -1,4 +1,4 @@
-const { OpenAISommelier } = require('../../src/services/openai-sommelier')
+const { SmartHybridSommelier } = require('../../src/services/smart-hybrid-sommelier.cjs')
 
 exports.handler = async (event, context) => {
   // Enable CORS
@@ -27,8 +27,7 @@ exports.handler = async (event, context) => {
   try {
     const { message, preferences, conversationHistory } = JSON.parse(event.body)
 
-    const sommelier = new OpenAISommelier()
-    await sommelier.initialize()
+    const sommelier = new SmartHybridSommelier()
 
     const result = await sommelier.processUserMessage({
       message,
