@@ -922,22 +922,23 @@ ${w.prompt}`
     setIsLoading(true)
 
     try {
-      // Load chocolate data and filters
-      const chocolatesResponse = await fetch('/data/chocolates.json')
-      const chocolatesData = await chocolatesResponse.json()
-
-      const filtersResponse = await fetch('/data/filters.json')
-      const filtersData = await filtersResponse.json()
-
-      // Simple client-side sommelier logic
-      const result = await processMessageClientSide({
-        message: content,
-        currentPreferences: userPreferences,
-        conversationHistory: messages,
-        chocolatesData,
-        filtersData,
-        t
+      // Use hybrid API instead of client-side logic
+      const response = await fetch('/api/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          preferences: userPreferences,
+          conversationHistory: messages.map(msg => ({
+            type: msg.type,
+            content: msg.content
+          }))
+        })
       })
+
+      const result = await response.json()
 
       // Add assistant response
       const assistantMessage = {

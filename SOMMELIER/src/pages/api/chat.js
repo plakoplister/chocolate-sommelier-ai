@@ -1,6 +1,6 @@
-import { OpenAISommelier } from '../../services/openai-sommelier'
+const { SmartHybridSommelier } = require('../../services/smart-hybrid-sommelier.cjs')
 
-const sommelier = new OpenAISommelier()
+const sommelier = new SmartHybridSommelier()
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

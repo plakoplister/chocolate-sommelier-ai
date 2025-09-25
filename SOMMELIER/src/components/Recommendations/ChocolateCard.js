@@ -78,9 +78,24 @@ export default function ChocolateCard({ chocolate }) {
           </div>
         )}
 
+        {/* Tasting Notes */}
+        {chocolate.tasting_notes && (
+          <div className="bg-accent-gold/10 rounded-lg p-3 mt-3">
+            <h5 className="text-sm font-sans text-accent-gold uppercase tracking-wide font-medium mb-2">
+              Notes de Dégustation
+            </h5>
+            <p className="text-sm font-sans text-secondary leading-relaxed">
+              {chocolate.tasting_notes}
+            </p>
+          </div>
+        )}
+
         {/* Expert Review */}
         {chocolate.expert_review && (
           <div className="bg-charcoal/50 rounded-lg p-3 mt-3">
+            <h5 className="text-sm font-sans text-accent-gold uppercase tracking-wide font-medium mb-2">
+              Avis Expert
+            </h5>
             <p className="text-sm font-sans text-secondary italic leading-relaxed">
               "{chocolate.expert_review}"
             </p>
